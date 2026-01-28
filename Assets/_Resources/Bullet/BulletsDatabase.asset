@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7de94b618883e974dbec37faabc2f383, type: 3}
+  m_Name: BulletsDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::Scriptables.BulletsDatabase
+  _bullets:
+  - {fileID: 8358695282985381703, guid: 1d4307f3810454f46a8cbee8c8f09396, type: 3}
