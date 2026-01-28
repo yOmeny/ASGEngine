@@ -1,7 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Scriptables;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Random = UnityEngine.Random;
 
 namespace Rifle_stuff
 {
@@ -16,6 +18,11 @@ namespace Rifle_stuff
         [SerializeField] private BulletProjectile _bulletPrefab;
         [SerializeField] private Transform riflePosition;
 
+
+        private float _lastShotTime;
+        private float recoilResetDelay = 0.08f; // ile po strzale zaczyna wracać
+        private float recoilReturnSpeed = 6f;
+
         private const float recoilAngleMultiplier = 40f;
 
         private float _nextFireTime;
@@ -29,6 +36,7 @@ namespace Rifle_stuff
 
         private Vector2 _currentRecoil;
         private Vector3 _currentShotDirection;
+        private bool _pendingDoubleFeed = false;
         public void InitController(RifleDataRecord rifle, BulletProjectile bullet)
         {
             ChangeRifle(rifle);
@@ -95,6 +103,14 @@ namespace Rifle_stuff
             // = Mathf.Lerp(_currentRecoil, 0f, Time.deltaTime * 6f);
             //_currentRecoil = Vector2.Lerp(_currentRecoil, Vector2.zero, Time.deltaTime * 6f);
 
+            // =============================
+            // RECOIL RESET PO CZASIE
+            // =============================
+            if (Time.time - _lastShotTime > recoilResetDelay)
+            {
+                _currentRecoil = Vector2.Lerp(_currentRecoil, Vector2.zero, Time.deltaTime * recoilReturnSpeed);
+            }
+
             _currentShotDirection = Vector3.Slerp(_currentShotDirection, riflePosition.forward, Time.deltaTime * 4f);
 
         }
@@ -105,10 +121,13 @@ namespace Rifle_stuff
             if (_bulletPrefab == null || riflePosition == null)
                 return;
 
+            
+           
+
             // =============================
             // 1. FIZYKA KULKI (pęd)
             // =============================
-            float bulletMass = _bulletPrefab.Data.GetMass;
+            float bulletMass = _bulletPrefab.Data.Mass;
             float muzzleVelocity = Mathf.Sqrt(2f * currentData.MuzzleForce / bulletMass);
             float bulletMomentum = bulletMass * muzzleVelocity;
 
@@ -117,8 +136,15 @@ namespace Rifle_stuff
             // =============================
             float recoilStrength = bulletMomentum * currentData.Recoil;
 
-            _currentRecoil.y += recoilStrength* recoilAngleMultiplier;              // pitch (zawsze w górę)
-            _currentRecoil.x += recoilStrength* recoilAngleMultiplier * 0.25f;      // delikatny yaw (deterministyczny)
+            //_currentRecoil.y += recoilStrength* recoilAngleMultiplier;              // pitch (zawsze w górę)
+            //_currentRecoil.x += recoilStrength* recoilAngleMultiplier * 0.25f;      // delikatny yaw (deterministyczny)
+
+            float yawRandomFactor = Random.Range(-currentData.Recoil, currentData.Recoil);
+            float pitchRandomFactor = Random.Range(currentData.Recoil * 0.8f, currentData.Recoil * 1.2f);
+
+
+            _currentRecoil.y += recoilStrength * recoilAngleMultiplier * pitchRandomFactor;
+            _currentRecoil.x += recoilStrength * recoilAngleMultiplier * yawRandomFactor;
 
             float maxYaw = currentData.Recoil * recoilAngleMultiplier * 0.25f * 3f;
             float maxPitch = currentData.Recoil * recoilAngleMultiplier * 6f;
@@ -182,8 +208,7 @@ namespace Rifle_stuff
             // =============================
             // 5. SPAWN KULKI
             // =============================
-            BulletProjectile bullet =
-                Instantiate(_bulletPrefab, riflePosition.position, Quaternion.identity);
+            //BulletProjectile bullet = Instantiate(_bulletPrefab, riflePosition.position, Quaternion.identity);
 
             // =============================
             // 6. HOP-UP (BEZ ZMIAN)
@@ -192,12 +217,101 @@ namespace Rifle_stuff
             Vector3 barrelRight = Vector3.Cross(Vector3.up, barrelForward).normalized;
             Vector3 angularForce = barrelRight * currentHopUp;
 
-            bullet.Initialize(
-                shotDirection * muzzleVelocity,
-                angularForce,
-                currentData.MagnusMultiplier
-            );
+            //
+            // Defects
+            //
+            float finalVelocity = muzzleVelocity;
+            int bulletCount = 1;
+
+            //
+            // Bullet DEfect
+            //
+
+            float maxBulletDefect;
+
+            switch (_bulletPrefab.Data.Brand)
+            {
+                case BulletBrand.Cheap:
+                    maxBulletDefect = 1.0f;   
+                    break;
+                case BulletBrand.Standard:
+                    maxBulletDefect = 0.5f;  
+                    break;
+                case BulletBrand.Premium:
+                    maxBulletDefect = 0.2f;  
+                    break;
+                default:
+                    maxBulletDefect = 0f;
+                    break;
+            }
+            float bulletDefectSliderNormalized = _bulletPrefab.Data.ChanceForDefect / 10f;
+            float finalBulletDefectChance = bulletDefectSliderNormalized * maxBulletDefect;
+            bool isDefect = Random.value < finalBulletDefectChance;
+
+            if (isDefect)
+            {
+                //muzzleVelocity *= Random.Range(0.3f, 0.7f);
+                finalVelocity *= 0.3f;
+                //worse solution
+                //Vector3 defectDrop = Vector3.down * Random.Range(0.2f, 0.6f);
+                //shotDirection = (shotDirection + defectDrop).normalized;
+            }
+
+            //
+            // Rifle Defect
+            //
+
+            float rifleDoubleFeedChance = currentData.RifleDoubleFeedChance/10f;
+            if (_pendingDoubleFeed)
+            {
+                bulletCount = 2;
+                finalVelocity *= Random.Range(0.45f, 0.6f);
+                _pendingDoubleFeed = false;
+            }
+            else
+            {
+                // losujemy czy BROŃ NIE ZASSIE kulki
+                if (Random.value < rifleDoubleFeedChance)
+                {
+                    _pendingDoubleFeed = true;
+                    return; // brak strzału – klik, pustka, dramat
+                }
+            }
+
+
+            if (bulletCount > 1)
+            {
+                for (int i = 0; i < bulletCount; i++)
+                {
+                    Vector3 dir = shotDirection;
+                    float yaw = Random.Range(-2f, 2f);
+                    float pitch = Random.Range(-2f, 2f); // ledwo ledwo
+
+
+                    Quaternion q = Quaternion.AngleAxis(yaw, Vector3.up) * Quaternion.AngleAxis(pitch, localRight);
+
+
+                    dir = q * shotDirection;
+
+                    float energySplit = Random.Range(0.35f, 0.65f);
+                    float bulletVelocity = (i == 0) ? finalVelocity * energySplit : finalVelocity * (1f - energySplit);
+
+
+                    BulletProjectile bullet = Instantiate(_bulletPrefab, riflePosition.position, Quaternion.identity);
+                    bullet.Initialize(dir * bulletVelocity, angularForce, currentData.MagnusMultiplier);
+                }
+            }
+            else
+            {
+                BulletProjectile bullet = Instantiate(_bulletPrefab, riflePosition.position, Quaternion.identity);
+                bullet.Initialize(shotDirection * finalVelocity, angularForce, currentData.MagnusMultiplier);
+            }
+            _lastShotTime = Time.time;
+
+
+            //bullet.Initialize(shotDirection * muzzleVelocity, angularForce, currentData.MagnusMultiplier);
         }
+
 
         public bool TryToggleFireMode()
         {

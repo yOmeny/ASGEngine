@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RifleData
   WeaponName: M4
   MuzzleForce: 1
-  Recoil: 1
+  Recoil: 0
   FireRate: 0.1
-  HopUp: 0
+  HopUp: 4.0643606
   MaxHopUp: 1200
-  MagnusMultiplier: 5
+  MagnusMultiplier: 4
   DefaultFireMode: 1
   existedFireMode: 0

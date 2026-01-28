@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d0291ce7a4ed4346ad8a00abf1367f9, type: 3}
   m_Name: Bullet_25
   m_EditorClassIdentifier: Assembly-CSharp::Scriptables.BulledData
-  Mass: 0
+  Mass: 0.00025
   Drag: 0.1
   Dispersion: {x: 0, y: 0}
-  ChanceForDefect: 0
+  Brand: 0
+  ChanceForDefect: 4.79

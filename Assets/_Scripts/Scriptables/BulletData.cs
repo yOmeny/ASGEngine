@@ -1,42 +1,35 @@
+using System.Diagnostics;
 using UnityEngine;
 
 namespace Scriptables
 {
-    public enum BulletMass
+   
+
+    public enum BulletBrand
     {
-        g25,
-        g30,
-        g32,
-        g35
+        Cheap,
+        Standard,
+        Premium
     }
+
+    
 
     [CreateAssetMenu(fileName = "BulletData", menuName = "Scriptable Objects/BulletData")]
     public sealed class BulletData : ScriptableObject
     {
-        [SerializeField] public BulletMass Mass;
+        [SerializeField] public float Mass = 0.00025f;
         public float Drag;
         public Vector2 Dispersion;
 
+        [Header("Quality")]
+        public BulletBrand Brand;
 
-
+       
         /// <summary>
         /// Value in percentage 0%-10%
         /// </summary>
         [Range(0, 10), Header("Chance that bullet will behave weirdly.")] public float ChanceForDefect; 
 
-        public float GetMass
-        {
-            get
-            {
-                switch (Mass)
-                {
-                    case BulletMass.g25: return 0.00025f;
-                    case BulletMass.g30: return 0.00030f;
-                    case BulletMass.g32: return 0.00032f;
-                    case BulletMass.g35: return 0.00035f;
-                    default: return 0;
-                }
-            }
-        }
+        
     }
 }

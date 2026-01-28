@@ -20,6 +20,11 @@ public class RifleData : ScriptableObject
     public float MaxHopUp=100f;
     public float MagnusMultiplier = 0.25f;
 
+    [Range(0, 10), Header("Chance that rifle won't suck bullet and throw 2 bullets in next shoot.")]
+    public float RifleDoubleFeedChance;
+
+
+
     public FireMode DefaultFireMode = FireMode.Semi;
     public bool existedFireMode = false;
 }
