@@ -16,8 +16,9 @@ MonoBehaviour:
   MuzzleForce: 1
   Recoil: 0
   FireRate: 0.1
-  HopUp: 4.0643606
+  HopUp: 2.4497356
   MaxHopUp: 1200
   MagnusMultiplier: 4
+  RifleDoubleFeedChance: 3.41
   DefaultFireMode: 1
   existedFireMode: 0

@@ -20,6 +20,7 @@ namespace UI
         [SerializeField] private BulletsDatabase _bullets;
         [SerializeField] private TMP_Dropdown _riflesDropdown;
         [SerializeField] private TMP_Dropdown _bulletDropdown;
+        [SerializeField] private TMP_Dropdown _riflePositioningDropdown;
         [SerializeField] private RifleController _rifleController;
         [SerializeField] private Slider _hopupSlider;
         [SerializeField] private Slider _rifleForceSlider;
@@ -28,11 +29,16 @@ namespace UI
         {
             _riflesDropdown.ClearOptions();
             _riflesDropdown.AddOptions(_rifles.Select(s => s.RifleType.ToString()).ToList());
+
            _bulletDropdown.ClearOptions();
            _bulletDropdown.AddOptions(_bullets.Select(s => s.Data.Mass.ToString()).ToList());
 
-           _riflesDropdown.onValueChanged.AddListener(OnRifleChanged);
+           _riflePositioningDropdown.ClearOptions();
+            _riflePositioningDropdown.AddOptions(Enum.GetValues(typeof(RiflePositionType)).Cast<RiflePositionType>().Select(e => e.ToString()).ToList());
+
+            _riflesDropdown.onValueChanged.AddListener(OnRifleChanged);
            _bulletDropdown.onValueChanged.AddListener(OnBulletChanged);
+           _riflePositioningDropdown.onValueChanged.AddListener(OnRiflePositionPresetValueChanged);
 
            _rifleForceSlider.onValueChanged.AddListener(OnRifleForceSliderValueChanged);
            _hopupSlider.onValueChanged.AddListener(OnHopupSliderValueChanged);
@@ -47,7 +53,7 @@ namespace UI
         private void OnHopupSliderValueChanged(float value)
         {
             _cachedRifle.RifleData.HopUp = value;
-            _rifleController.SetHopUp(value);// change from chat added
+            _rifleController.SetHopUp(value);
         }
 
         private void Init()
@@ -87,5 +93,13 @@ namespace UI
 
             _rifleController.ChangeBullet(GetBullet());
         }
+
+        private void OnRiflePositionPresetValueChanged(int index)
+        {
+            RiflePositionType preset = (RiflePositionType)index;
+            _rifleController.ApplyPosition(preset);
+        }
+
+
     }
 }

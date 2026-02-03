@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Scriptables;
 using UnityEngine;
@@ -13,20 +14,65 @@ namespace Rifle_stuff
         M4
     }
 
+    [Serializable]
+    public class RiflePositionPreset
+    {
+        public RiflePositionType PositionType;
+        public float RotationY;
+
+    }
+
+    [Serializable]
+    public class DistanceTarget
+    {
+        public RiflePositionType type;
+        public Transform targetCube;
+        public float distance;
+    }
+
+    public enum RiflePositionType
+    {
+        M20,
+        M30,
+        M40,
+        M50
+    }
+
     public class RifleController : MonoBehaviour
     {
         [SerializeField] private BulletProjectile _bulletPrefab;
         [SerializeField] private Transform riflePosition;
+        [SerializeField] private List<RiflePositionPreset> _presets;
+        [SerializeField] private List<DistanceTarget> _targets;
 
+
+        public void ApplyPosition(RiflePositionType type)
+        {
+            var preset = _presets.First(p => p.PositionType == type);
+            var target = _targets.First(t => t.type == type);
+
+            // 1. rifle rotation
+            Vector3 euler = transform.localEulerAngles;
+            euler.y = preset.RotationY;
+            transform.localEulerAngles = euler;
+
+            // 2. cube position – always straight ahead of the barrel
+            Transform cube = target.targetCube;
+            cube.position = riflePosition.position + riflePosition.forward * target.distance;
+
+            // 3. cube looks at rifle 
+            cube.LookAt(riflePosition);
+
+            Debug.Log($"Preset {type}: rotY={preset.RotationY}, dist={target.distance}");
+        }
 
         private float _lastShotTime;
-        private float recoilResetDelay = 0.08f; // ile po strzale zaczyna wracać
+        private float recoilResetDelay = 0.08f; // how much after the shot it starts coming back
         private float recoilReturnSpeed = 6f;
 
         private const float recoilAngleMultiplier = 40f;
 
         private float _nextFireTime;
-        //private float _currentRecoil;
         private FireMode _currentFireMode;
 
 
@@ -98,13 +144,8 @@ namespace Rifle_stuff
                 }
             }
 
-
-            //gradual reduction of recoil
-            // = Mathf.Lerp(_currentRecoil, 0f, Time.deltaTime * 6f);
-            //_currentRecoil = Vector2.Lerp(_currentRecoil, Vector2.zero, Time.deltaTime * 6f);
-
             // =============================
-            // RECOIL RESET PO CZASIE
+            // RECOIL RESET AFTER TIME
             // =============================
             if (Time.time - _lastShotTime > recoilResetDelay)
             {
@@ -121,23 +162,17 @@ namespace Rifle_stuff
             if (_bulletPrefab == null || riflePosition == null)
                 return;
 
-            
-           
-
             // =============================
-            // 1. FIZYKA KULKI (pęd)
+            // 1. BALL PHYSICS (momentum)
             // =============================
             float bulletMass = _bulletPrefab.Data.Mass;
             float muzzleVelocity = Mathf.Sqrt(2f * currentData.MuzzleForce / bulletMass);
             float bulletMomentum = bulletMass * muzzleVelocity;
 
             // =============================
-            // 2. RECOIL BRONI (NIE LOSOWY)
+            // 2. WEAPON RECOIL (NOT RANDOM)
             // =============================
             float recoilStrength = bulletMomentum * currentData.Recoil;
-
-            //_currentRecoil.y += recoilStrength* recoilAngleMultiplier;              // pitch (zawsze w górę)
-            //_currentRecoil.x += recoilStrength* recoilAngleMultiplier * 0.25f;      // delikatny yaw (deterministyczny)
 
             float yawRandomFactor = Random.Range(-currentData.Recoil, currentData.Recoil);
             float pitchRandomFactor = Random.Range(currentData.Recoil * 0.8f, currentData.Recoil * 1.2f);
@@ -152,33 +187,19 @@ namespace Rifle_stuff
             _currentRecoil.x = Mathf.Clamp(_currentRecoil.x, -maxYaw, maxYaw);
             _currentRecoil.y = Mathf.Clamp(_currentRecoil.y, 0f, maxPitch);
 
-            //_currentRecoil.y = Mathf.Clamp(_currentRecoil.y, 0f, currentData.Recoil * 6f);
-            //_currentRecoil.x = Mathf.Clamp(_currentRecoil.x, -currentData.Recoil * 3f, currentData.Recoil * 3f);
-
-            //Quaternion recoilRotation =
-            //    Quaternion.AngleAxis(_currentRecoil.x, Vector3.up) *
-            //    Quaternion.AngleAxis(-_currentRecoil.y, Vector3.right);
-
-            ////Vector3 shotDirection = recoilRotation * riflePosition.forward;
-
-            //_currentShotDirection = recoilRotation * _currentShotDirection;
-            //_currentShotDirection.Normalize();
-
-            // lokalna oś "prawo" aktualnego kierunku strzału
+            // local "right" axis of the current shooting direction
             Vector3 localRight = Vector3.Cross(Vector3.up, _currentShotDirection).normalized;
 
 
-            // pitch (góra/dół) – wokół PRAWEJ osi lufy
-            Quaternion pitchRotation =
-                Quaternion.AngleAxis(-_currentRecoil.y, localRight);
+            // pitch (up/down) – around the right axis of the barrel
+            Quaternion pitchRotation = Quaternion.AngleAxis(-_currentRecoil.y, localRight);
 
 
-            // yaw (lewo/prawo) – wokół osi świata
+            // yaw (left/right) – around the world axis
             Quaternion yawRotation =
                 Quaternion.AngleAxis(_currentRecoil.x, Vector3.up);
 
 
-            // najpierw pitch, potem yaw
             Quaternion recoilRotation = yawRotation * pitchRotation;
 
 
@@ -190,7 +211,7 @@ namespace Rifle_stuff
             Vector3 shotDirection = _currentShotDirection;
 
             // =============================
-            // 3. DISPERSION KULKI (LOSOWA)
+            // 3. BALL DISPERSION (RANDOM)
             // =============================
             Vector2 dispersion = _bulletPrefab.Data.Dispersion;
 
@@ -203,15 +224,9 @@ namespace Rifle_stuff
 
             shotDirection = dispersionRotation * shotDirection;
 
-           
 
             // =============================
-            // 5. SPAWN KULKI
-            // =============================
-            //BulletProjectile bullet = Instantiate(_bulletPrefab, riflePosition.position, Quaternion.identity);
-
-            // =============================
-            // 6. HOP-UP (BEZ ZMIAN)
+            // 4. HOP-UP 
             // =============================
             Vector3 barrelForward = riflePosition.forward;
             Vector3 barrelRight = Vector3.Cross(Vector3.up, barrelForward).normalized;
@@ -224,7 +239,7 @@ namespace Rifle_stuff
             int bulletCount = 1;
 
             //
-            // Bullet DEfect
+            // Bullet Defect
             //
 
             float maxBulletDefect;
@@ -250,11 +265,8 @@ namespace Rifle_stuff
 
             if (isDefect)
             {
-                //muzzleVelocity *= Random.Range(0.3f, 0.7f);
+                // could be also as a defect: muzzleVelocity *= Random.Range(0.3f, 0.7f);
                 finalVelocity *= 0.3f;
-                //worse solution
-                //Vector3 defectDrop = Vector3.down * Random.Range(0.2f, 0.6f);
-                //shotDirection = (shotDirection + defectDrop).normalized;
             }
 
             //
@@ -270,11 +282,10 @@ namespace Rifle_stuff
             }
             else
             {
-                // losujemy czy BROŃ NIE ZASSIE kulki
                 if (Random.value < rifleDoubleFeedChance)
                 {
                     _pendingDoubleFeed = true;
-                    return; // brak strzału – klik, pustka, dramat
+                    return; 
                 }
             }
 
@@ -285,17 +296,14 @@ namespace Rifle_stuff
                 {
                     Vector3 dir = shotDirection;
                     float yaw = Random.Range(-2f, 2f);
-                    float pitch = Random.Range(-2f, 2f); // ledwo ledwo
-
+                    float pitch = Random.Range(-2f, 2f);
 
                     Quaternion q = Quaternion.AngleAxis(yaw, Vector3.up) * Quaternion.AngleAxis(pitch, localRight);
-
 
                     dir = q * shotDirection;
 
                     float energySplit = Random.Range(0.35f, 0.65f);
                     float bulletVelocity = (i == 0) ? finalVelocity * energySplit : finalVelocity * (1f - energySplit);
-
 
                     BulletProjectile bullet = Instantiate(_bulletPrefab, riflePosition.position, Quaternion.identity);
                     bullet.Initialize(dir * bulletVelocity, angularForce, currentData.MagnusMultiplier);
@@ -307,9 +315,6 @@ namespace Rifle_stuff
                 bullet.Initialize(shotDirection * finalVelocity, angularForce, currentData.MagnusMultiplier);
             }
             _lastShotTime = Time.time;
-
-
-            //bullet.Initialize(shotDirection * muzzleVelocity, angularForce, currentData.MagnusMultiplier);
         }
 
 
@@ -332,8 +337,6 @@ namespace Rifle_stuff
 
         public void SetHopUp(float value)
         {
-            //currentHopUp = Mathf.Clamp(value, -currentData.MaxHopUp, currentData.MaxHopUp);
-            //currentHopUp = Mathf.Lerp(0f, 8000f, value); // 300 rad/s = ~30 obrotów/s
             currentHopUp = value * currentData.MaxHopUp; ;
             Debug.Log($"[Rifle] HopUp applied: {currentHopUp}");
         }

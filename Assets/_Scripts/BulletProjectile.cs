@@ -7,32 +7,22 @@ public sealed class BulletProjectile : MonoBehaviour
     [SerializeField] private Rigidbody _rigidbody;
     [SerializeField] public BulletData Data;
 
-    //private float _hopUp;
-    private float _magnusMultiplier;// stała "mocy hopa" (do tuningu)
-    //public float magnusK = 0.00002f;
-
-
-    //public float maxLift = 0.04f;       // limit siły (N), żeby nie odleciało w kosmos
-    //public float minSpeed = 5f;
+    private float _magnusMultiplier;// constant hop up power (for tuning)
 
     public float airDensity = 1.2f;       // kg/m^3
-    //public float clScale = 1.2f;          // "moc" hopa (tuning)
-    public float maxLift = 0.08f;         // N, bezpieczny limit
+    public float maxLift = 0.08f;         // N
     public float minSpeed = 3f;
     public const float radius = 0.002975f;
+    public float dragCoefficient = 0.45f;
+
     float area = Mathf.PI * radius * radius;
 
-
-    public float dragCoefficient = 0.45f;
     private void SetInitialRigidbodyState()
     {
-
         _rigidbody.useGravity = true;
         _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
         _rigidbody.maxAngularVelocity = 10000f;
-
-
     }
 
     public void Initialize(Vector3 initialVelocity, Vector3 initialRotation, float magnusMultiplier)
@@ -45,21 +35,14 @@ public sealed class BulletProjectile : MonoBehaviour
         Debug.Log($"Rotation:{initialRotation}");
         Debug.Log($"omega={_rigidbody.angularVelocity.magnitude} rad/s, vmax={_rigidbody.maxAngularVelocity}");
 
-        //_hopUp = hopUpSpin;
-        this._magnusMultiplier = magnusMultiplier;
-
-        
+        _magnusMultiplier = magnusMultiplier;
     }
 
     private void FixedUpdate()
     {
-
-
-
         Vector3 v = _rigidbody.linearVelocity;
         float speed = v.magnitude;
         if (speed < minSpeed) return;
-
 
      
 
@@ -81,9 +64,6 @@ public sealed class BulletProjectile : MonoBehaviour
         // Direction: make lift perpendicular to velocity & spin axis
 
         Vector3 liftDir = Vector3.Cross(v, omega).normalized;
-        //Vector3 liftDir = Vector3.Cross(omega, v).normalized;
-
-
         _rigidbody.AddForce(liftDir * liftMag, ForceMode.Force);
 
 

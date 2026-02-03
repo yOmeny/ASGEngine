@@ -16,4 +16,4 @@ MonoBehaviour:
   Drag: 0.1
   Dispersion: {x: 0, y: 0}
   Brand: 0
-  ChanceForDefect: 4.79
+  ChanceForDefect: 5.33

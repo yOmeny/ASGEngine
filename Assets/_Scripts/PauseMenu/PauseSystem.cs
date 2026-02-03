@@ -1,19 +1,20 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 public sealed class PauseSystem : MonoBehaviour
 {
-    [SerializeField] private GameObject pauseMenuPrefab;
-    [SerializeField] private Canvas uiCanvas;
+    [FormerlySerializedAs("pauseMenuPrefab")] [SerializeField] private GameObject _pauseMenuPrefab;
+    [FormerlySerializedAs("uiCanvas")] [SerializeField] private Canvas _uiCanvas;
 
-    private GameObject currentPauseMenu;
-    private bool isPaused;
+    private GameObject _currentPauseMenu;
+    private bool _isPaused;
 
     private void Update()
     {
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
         {
-            if (isPaused)
+            if (_isPaused)
                 Resume();
             else
                 Pause();
@@ -25,12 +26,12 @@ public sealed class PauseSystem : MonoBehaviour
     {
 
 
-        if (currentPauseMenu == null)
+        if (_currentPauseMenu == null)
         {
-            currentPauseMenu = Instantiate(pauseMenuPrefab, uiCanvas.transform);
+            _currentPauseMenu = Instantiate(_pauseMenuPrefab, _uiCanvas.transform);
 
 
-            var ui = currentPauseMenu.GetComponent<PauseMenuUI>();
+            var ui = _currentPauseMenu.GetComponent<PauseMenuUI>();
             ui.Init(this);
         }
 
@@ -38,21 +39,21 @@ public sealed class PauseSystem : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;//shows cursor
         GamePause.SetPaused(true);
-        isPaused = true;
+        _isPaused = true;
     }
 
     public void Resume()
     {
-        if (currentPauseMenu != null)
+        if (_currentPauseMenu != null)
         {
-            Destroy(currentPauseMenu);
-            currentPauseMenu = null;
+            Destroy(_currentPauseMenu);
+            _currentPauseMenu = null;
         }
 
         Time.timeScale = 1f;//resume game
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;//hide cursor
         GamePause.SetPaused(false);
-        isPaused = false;
+        _isPaused = false;
     }
 }

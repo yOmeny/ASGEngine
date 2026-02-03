@@ -2,27 +2,17 @@ using UnityEngine;
 
 public class PauseMenuUI : MonoBehaviour
 {
-    
-    void Start()
-    {
-        
-    }
 
-    void Update()
-    {
-        
-    }
-
-    private PauseSystem pauseSystem;
+    private PauseSystem _pauseSystem;
 
     public void Init(PauseSystem system)
     {
-        pauseSystem = system;
+        _pauseSystem = system;
     }
 
     public void Resume()
     {
-        pauseSystem.Resume();
+        _pauseSystem.Resume();
     }
 
     public void Quit()

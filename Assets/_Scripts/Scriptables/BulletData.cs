@@ -3,15 +3,12 @@ using UnityEngine;
 
 namespace Scriptables
 {
-   
-
     public enum BulletBrand
     {
         Cheap,
         Standard,
         Premium
     }
-
     
 
     [CreateAssetMenu(fileName = "BulletData", menuName = "Scriptable Objects/BulletData")]
